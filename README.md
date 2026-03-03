@@ -23,7 +23,7 @@ Skill Conductor synthesizes four approaches to skill creation:
 | Source | Author | What it contributes |
 |--------|--------|-------------------|
 | [**Skill Creator**](https://github.com/openclaw/openclaw/tree/main/skills) | OpenClaw | Base framework, scaffold scripts, validation, packaging |
-| [**The Complete Guide to Building Skills for Claude**](https://claude.com/blog/complete-guide-to-building-skills-for-claude) | [Anthropic](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf?hsLang=en) | 32-page PDF: 5 architecture patterns, success metrics (90% triggering rate), three skill categories |
+| [**The Complete Guide to Building Skills for Claude**](https://claude.com/blog/complete-guide-to-building-skills-for-claude) | [Anthropic](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf?hsLang=en) | 32-page PDF: 5 architecture patterns (sequential workflow, iterative refinement, context-aware selection, domain intelligence, multi-MCP coordination), success metrics (90% triggering rate, 0 failed calls), three skill categories |
 | [**Superpowers** — writing-skills](https://github.com/obra/superpowers/blob/main/skills/writing-skills/SKILL.md) | [Jesse Vincent (obra)](https://github.com/obra/superpowers) | TDD approach to skills, the "description trap" discovery |
 | [**Skills Best Practices**](https://github.com/mgechev/skills-best-practices) | [Minko Gechev](https://blog.mgechev.com/2026/02/26/skill-eval/) (Angular team lead, Google) | Three-stage LLM validation, eval methodology |
 
