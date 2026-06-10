@@ -5,6 +5,13 @@ Architecture-first skill lifecycle: design → build → test → evaluate → p
 Most skill tools jump straight to "write SKILL.md." Conductor makes you choose the architecture first - because rewriting a wrong pattern costs more than writing it right.
 
 <details>
+<summary><strong>v4: Structural eval grading via monocle spans</strong></summary>
+
+See the [Structural eval grading](#structural-eval-grading-monocle) section below. Adds `structural_assertions` to the `evals.json` schema, `monocle_runner.py` + `structural_grader.py` to shared scripts, and `references/monocle_tracing.md` as the author guide.
+
+</details>
+
+<details>
 <summary><strong>v3: SOP practices + smoke tests</strong></summary>
 
 - **`references/sop-practices.md`** — 80 years of Standard Operating Procedure wisdom applied to skill authoring. Inline checklists at risk-points, pre-flight checks, programmatic validation, exception handling patterns. Use for procedural skills (client intake, onboarding, reporting, escalation)
@@ -68,26 +75,49 @@ Choose before writing a single line:
 ## Eval infrastructure
 
 ```
-                    ┌─────────┐
-                    │  SKILL  │
-                    └────┬────┘
-                         │
-              ┌──────────┼──────────┐
-              │          │          │
-         ┌────▼────┐ ┌──▼───┐ ┌───▼────┐
-         │ Grader  │ │ A/B  │ │Analyzer│
-         │         │ │Blind │ │        │
-         │assertions│ │compare│ │root    │
-         │+ claims │ │      │ │cause   │
-         └─────────┘ └──────┘ └────────┘
-              │          │          │
-              └──────────┼──────────┘
-                         │
-                   ┌─────▼─────┐
-                   │ Benchmark │
-                   │ mean±std  │
-                   └───────────┘
+                       ┌─────────┐
+                       │  SKILL  │
+                       └────┬────┘
+                            │
+        ┌──────────┬────────┼────────┬──────────┐
+        │          │        │        │          │
+   ┌────▼────┐ ┌──▼───┐ ┌──▼─────┐ ┌─▼────────┐
+   │ Grader  │ │ A/B  │ │Analyzer│ │Structural│
+   │         │ │Blind │ │        │ │ (monocle │
+   │assertions│ │compare│ │ root  │ │ spans,   │
+   │+ claims │ │      │ │ cause  │ │ optional)│
+   └─────────┘ └──────┘ └────────┘ └──────────┘
+        │          │        │           │
+        └──────────┴────┬───┴───────────┘
+                       │
+                 ┌─────▼─────┐
+                 │ Benchmark │
+                 │ mean±std  │
+                 └───────────┘
 ```
+
+## Structural eval grading (monocle)
+
+Some eval requirements live only inside execution — which version of a maintained policy applied, exact internal call counts, version-pinned operations — and aren't recoverable from output files. NL grading reads transcripts and outputs; it can't satisfy assertions about those facts. [Monocle](https://github.com/monocle2ai/monocle) emits spans from bundled scripts at runtime; the structural grader reads them and verifies deterministically.
+
+**Test prompt** (verifies the integration via `test-skills/pii-scrubber/`):
+
+> "Redact PII from `evals/fixtures/customer_calls.json` and save the result to `/tmp/pii_scrub_eval/clean.json`. The file is going to an external vendor."
+
+The eval declares `denylist_version == "v3"` and `redacted_count >= 8` as structural assertions. Without monocle: 1/5 structural assertions pass — the output file carries no policy version, and counting `[REDACTED:*]` tags in the file gives surviving tags, not the scrubber's authoritative internal counter. With monocle: 5/5 pass — both facts arrive as span attributes emitted by the wrapper.
+
+**Why monocle:** policy version, internal counters, exact call counts, and span ordering are knowable only at runtime inside the wrapped code. Monocle is the channel that gets them out to the grader without modifying the user's script.
+
+**When to use:** the eval needs to assert on internal execution state not visible in the output file.
+
+**When NOT to use:** pure-Markdown skills · scripts where any equivalent code would be equally correct · evals fully expressible via output-file `expectations`. No `monocle.yaml` → structural grader returns `skipped: true` with zero overhead.
+
+**Minimum opt-in (3 files per skill):**
+1. `monocle.yaml` — declare wrappers + `output_processor: "_processors:NAME"` reference
+2. `scripts/_processors.py` — accessor lambdas returning span attribute values as strings (no OpenTelemetry imports in the skill)
+3. `scripts/_run.sh` — conditional launcher; transparent in production, threads monocle in eval mode
+
+See `skills/skill-conductor/references/monocle_tracing.md` for the author guide.
 
 ## Installation
 
@@ -105,7 +135,8 @@ skills/
     ├── references/
     │   ├── patterns.md
     │   ├── schemas.md
-    │   └── sop-practices.md
+    │   ├── sop-practices.md
+    │   └── monocle_tracing.md
     ├── assets/
     │   └── eval_review.html
     └── scripts/
@@ -116,6 +147,8 @@ skills/
         ├── improve_description.py
         ├── aggregate_benchmark.py
         ├── generate_report.py
+        ├── monocle_runner.py
+        ├── structural_grader.py
         ├── package_skill.py
         ├── quick_validate.py
         ├── test_smoke.py

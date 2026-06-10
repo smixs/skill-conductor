@@ -17,7 +17,10 @@ Defines the evals for a skill. Located at `evals/evals.json` within the skill di
       "prompt": "User's example prompt",
       "expected_output": "Description of expected result",
       "files": ["evals/files/sample1.pdf"],
-      "expectations": ["The output includes X", "The skill used script Y"]
+      "expectations": ["The output includes X", "The skill used script Y"],
+      "structural_assertions": [
+        {"kind": "span_present", "name": "pii.scrub_file"}
+      ]
     }
   ]
 }
@@ -30,7 +33,8 @@ Defines the evals for a skill. Located at `evals/evals.json` within the skill di
 - `evals[].prompt`: The task to execute
 - `evals[].expected_output`: Human-readable description of success
 - `evals[].files`: Optional list of input file paths (relative to skill root)
-- `evals[].expectations`: List of verifiable statements
+- `evals[].expectations`: List of verifiable statements (NL, graded by `agents/grader.md`)
+- `evals[].structural_assertions`: Optional. Deterministic assertions over monocle spans, graded by `scripts/structural_grader.py`. Use ONLY when the eval needs to verify internal execution state that's not recoverable from output files (denylist version applied, exact internal call counts, version pins). When the eval can be fully expressed via `expectations`, omit this field. When omitted, the structural grader returns `skipped: true` with zero overhead. See `references/monocle_tracing.md`.
 
 ---
 

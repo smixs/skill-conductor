@@ -114,6 +114,8 @@ Choose degrees of freedom — this determines how much control vs. flexibility t
 
 **Если скил процедурный** (бизнес-процесс с цепочкой действий и решениями: обработка заявки, создание КП, обработка счёта, онбординг, эскалация инцидента) — прочитай `references/sop-practices.md`. Там 8 принципов из 80-летней SOP-традиции (армия США → авиация → McDonald's): TWI-структура шагов, inline-чеклисты, 5 Why, выбор формата (simple/hierarchical/flowchart), запреты на модальные слова. Это сильно меняет как пишется SKILL.md для процедурных задач.
 
+**If the eval needs to assert on internal execution state that isn't recoverable from output files** (which denylist version applied, exact internal call counts, version-pinned operations) — read `references/monocle_tracing.md`. Add `structural_assertions` to `evals.json` and ship a `monocle.yaml`. Do NOT add monocle when the skill is pure Markdown, when bundled scripts are convenience-only, or when the eval's quality bar is fully expressible from output files — the LLM grader is sufficient and adding monocle is overhead with no signal.
+
 ### Step 4: Scaffold
 
 ```bash
@@ -465,6 +467,7 @@ Creates `skill-name.skill` (zip with .skill extension). Verify: unzip in temp di
 | `references/patterns.md`         | 5 architectural patterns + anti-patterns   |
 | `references/schemas.md`          | JSON schemas for evals, grading, benchmark |
 | `references/sop-practices.md`    | 8 SOP principles for procedural skills (TWI, 5 Why, format selection, modal weasel words) |
+| `references/monocle_tracing.md`  | Structural eval grading via monocle spans — for skills bundling correctness-critical scripts |
 | `eval-viewer/`                   | Interactive HTML viewer for eval results   |
 | `assets/eval_review.html`        | Trigger eval set editor                    |
 | `scripts/eval_skill.py`          | Structural validation (10-point scoring)   |
