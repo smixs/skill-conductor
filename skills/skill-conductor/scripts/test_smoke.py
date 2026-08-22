@@ -269,6 +269,11 @@ def test_aggregate_benchmark_help():
 # --- run all ---
 
 def main():
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    from utils import force_utf8_stdio  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+    sys.path.pop(0)
+    force_utf8_stdio()
+
     print("\nskill-conductor smoke tests\n" + "─" * 32)
 
     print("\nutils.parse_skill_md:")

@@ -1,7 +1,23 @@
 """Shared utilities for skill-creator scripts."""
 
 import random
+import sys
 from pathlib import Path
+
+
+def force_utf8_stdio() -> None:
+    """Make stdout/stderr able to carry the emoji these scripts print.
+
+    Python encodes stdout with the locale encoding whenever it is not attached
+    to a console: a pipe, a redirect, a CI log, an agent capturing output. On a
+    non-UTF-8 locale (cp1251, cp1252, cp932, ...) the first emoji then raises
+    UnicodeEncodeError, and the script dies before reporting anything -- the
+    traceback is the only output the caller ever sees.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:  # absent when stdout is swapped for StringIO
+            reconfigure(encoding="utf-8", errors="replace")
 
 
 def split_evals(
