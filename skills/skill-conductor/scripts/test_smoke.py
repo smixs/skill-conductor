@@ -14,6 +14,7 @@ This is not a full unit test suite — it's a fast safety net so we don't ship
 broken scripts. Real behavior is verified by Mode 3 VALIDATE on real skills.
 """
 
+import io
 import json
 import os
 import shutil
@@ -99,6 +100,52 @@ def test_parse_no_frontmatter_raises():
         sys.path.pop(0)
 
 
+# --- utils.force_utf8_stdio ---
+
+def test_force_utf8_stdio_reconfigures():
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    try:
+        import utils  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+
+        class FakeStream:
+            def __init__(self):
+                self.kwargs = None
+
+            def reconfigure(self, **kwargs):
+                self.kwargs = kwargs
+
+        out, err = FakeStream(), FakeStream()
+        real_out, real_err = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = out, err
+        try:
+            utils.force_utf8_stdio()
+        finally:
+            sys.stdout, sys.stderr = real_out, real_err
+        expected = {"encoding": "utf-8", "errors": "replace"}
+        assert out.kwargs == expected, f"stdout got: {out.kwargs}"
+        assert err.kwargs == expected, f"stderr got: {err.kwargs}"
+    finally:
+        sys.path.pop(0)
+
+
+def test_force_utf8_stdio_tolerates_missing_reconfigure():
+    """A stream swapped for StringIO has no reconfigure - leave it alone, do not crash."""
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    try:
+        import utils  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+        buf = io.StringIO()
+        assert not hasattr(buf, "reconfigure"), "StringIO gained reconfigure; test premise is stale"
+        real_out, real_err = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = buf, buf
+        try:
+            utils.force_utf8_stdio()
+        finally:
+            sys.stdout, sys.stderr = real_out, real_err
+        assert buf.getvalue() == "", f"helper wrote to the stream: {buf.getvalue()!r}"
+    finally:
+        sys.path.pop(0)
+
+
 # --- eval_skill.py ---
 
 def test_eval_skill_good_passes():
@@ -106,7 +153,7 @@ def test_eval_skill_good_passes():
         skill = make_good_skill(Path(tmp))
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "eval_skill.py"), str(skill)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         assert result.returncode == 0, f"exit {result.returncode}: {result.stderr}"
         assert "10/10" in result.stdout or "PASS" in result.stdout.upper(), \
@@ -118,7 +165,7 @@ def test_eval_skill_bad_fails():
         skill = make_bad_skill(Path(tmp))
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "eval_skill.py"), str(skill)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         # bad skill must either exit non-zero or report failures
         combined = result.stdout + result.stderr
@@ -142,7 +189,7 @@ def test_eval_skill_detects_secret_leak():
         )
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "eval_skill.py"), str(skill)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         combined = (result.stdout + result.stderr).lower()
         assert "leak" in combined or "secret" in combined, \
@@ -164,7 +211,7 @@ def test_eval_skill_list_description_no_crash():
         )
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "eval_skill.py"), str(skill)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         assert "Traceback" not in result.stderr, f"eval crashed: {result.stderr[:400]}"
         assert "must be a string" in result.stdout, \
@@ -181,7 +228,7 @@ def test_eval_skill_json_emits_all_det_ids():
         sys.path.pop(0)
     result = subprocess.run(
         [UV_BIN, "run", str(SCRIPTS_DIR / "eval_skill.py"), str(SKILL_DIR), "--json"],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, encoding="utf-8", timeout=30,
     )
     records = json.loads(result.stdout)
     ids = [r["id"] for r in records]
@@ -201,7 +248,7 @@ def test_quick_validate_good_passes():
         skill = make_good_skill(Path(tmp))
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "quick_validate.py"), str(skill)],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, encoding="utf-8", timeout=15,
         )
         assert result.returncode == 0, f"exit {result.returncode}: {result.stderr[:300]}"
 
@@ -211,7 +258,7 @@ def test_quick_validate_bad_fails():
         skill = make_bad_skill(Path(tmp))
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "quick_validate.py"), str(skill)],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, encoding="utf-8", timeout=15,
         )
         assert result.returncode != 0, "expected non-zero exit on bad skill"
 
@@ -223,7 +270,7 @@ def test_init_skill_creates_structure():
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "init_skill.py"),
              "smoke-init-test", "--path", tmp],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, encoding="utf-8", timeout=15,
         )
         assert result.returncode == 0, f"exit {result.returncode}: {result.stderr}"
         created = Path(tmp) / "smoke-init-test"
@@ -245,7 +292,7 @@ def test_package_skill_creates_zip():
         result = subprocess.run(
             [UV_BIN, "run", str(SCRIPTS_DIR / "package_skill.py"),
              str(skill), str(out_dir)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", timeout=30,
         )
         assert result.returncode == 0, f"exit {result.returncode}: {result.stderr[:500]}"
         produced = list(out_dir.glob("*.skill"))
@@ -260,7 +307,7 @@ def test_package_skill_creates_zip():
 def test_aggregate_benchmark_help():
     result = subprocess.run(
         [UV_BIN, "run", str(SCRIPTS_DIR / "aggregate_benchmark.py"), "--help"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, encoding="utf-8", timeout=15,
     )
     assert result.returncode == 0, f"--help failed: {result.stderr}"
     assert "skill" in result.stdout.lower() or "benchmark" in result.stdout.lower()
@@ -269,11 +316,20 @@ def test_aggregate_benchmark_help():
 # --- run all ---
 
 def main():
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    from utils import force_utf8_stdio  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+    sys.path.pop(0)
+    force_utf8_stdio()
+
     print("\nskill-conductor smoke tests\n" + "─" * 32)
 
     print("\nutils.parse_skill_md:")
     run("parses good skill", test_parse_good)
     run("raises on bad frontmatter", test_parse_no_frontmatter_raises)
+
+    print("\nutils.force_utf8_stdio:")
+    run("reconfigures stdout/stderr to utf-8", test_force_utf8_stdio_reconfigures)
+    run("tolerates a stream without reconfigure", test_force_utf8_stdio_tolerates_missing_reconfigure)
 
     print("\neval_skill.py:")
     run("good skill passes", test_eval_skill_good_passes)

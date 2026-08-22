@@ -27,6 +27,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).parent))
+from utils import force_utf8_stdio  # noqa: E402  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+
 
 # Deterministic question bank (id -> dimension, critical, text, violation_example).
 # eval_skill.py is the SOLE emitter of these records (see SHARED CONTRACT).
@@ -406,6 +409,7 @@ def eval_skill(skill_path, json_mode=False):
 
 
 if __name__ == "__main__":
+    force_utf8_stdio()
     parser = argparse.ArgumentParser(description="Skill evaluator (discovery/structure checks)")
     parser.add_argument("skill_folder", help="Path to the skill folder to evaluate")
     parser.add_argument("--json", action="store_true",

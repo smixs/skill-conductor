@@ -41,6 +41,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from utils import force_utf8_stdio  # noqa: E402  # pyright: ignore[reportMissingImports]  # resolved at runtime via sys.path.insert above
+
 
 def calculate_stats(values: list[float]) -> dict:
     """Calculate mean, stddev, min, max for a list of values."""
@@ -336,6 +339,7 @@ def generate_markdown(benchmark: dict) -> str:
 
 
 def main():
+    force_utf8_stdio()
     parser = argparse.ArgumentParser(
         description="Aggregate benchmark run results into summary statistics"
     )
